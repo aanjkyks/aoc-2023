@@ -16,6 +16,11 @@ const INPUT: &str = "
 .664.598..
 ";
 
+const INPUT_SMOL: &str = "
+467.
+...*
+";
+
 const EMPTY_SYMBOL: char = '.';
 
 fn main() {
@@ -25,7 +30,7 @@ fn main() {
     buf_reader.read_to_string(&mut input).unwrap();
 
     println!("First step");
-    let step_one: u32 = first_step(INPUT.to_string());
+    let step_one: u32 = first_step(INPUT_SMOL.to_string());
     println!("{}", step_one);
 
     println!("Second step");
@@ -36,8 +41,9 @@ fn main() {
 fn first_step(input: String) -> u32 {
     let mut matrix = Matrix::new(&input).unwrap();
     let mut sum = 0;
-    for (i, line) in matrix.val().iter_mut().enumerate() {
-        for (j, cell) in line.iter_mut().enumerate() {
+    for (i, line) in matrix.val().iter().enumerate() {
+        for (j, cell) in line.iter().enumerate() {
+            println!("cell = {:?}", cell);
             let visited = cell.visited;
             let char = cell.c;
             if visited {
@@ -64,12 +70,13 @@ fn first_step(input: String) -> u32 {
                 let relevant = rows
                     .map(|x| std::iter::repeat(x).zip(cols.clone()))
                     .flatten()
-                    .filter(|cell| own_cells.any(|own_cell| *cell != own_cell))
+                    .filter(|cell| own_cells.all(|own_cell| *cell != own_cell))
                     .map(|(row, col)| matrix.get(row, col))
                     .any(|cell| cell.is_some());
                 if relevant {
                     let number_str: String = num.iter().map(|c| *c).collect();
                     let number: u32 = number_str.parse().unwrap();
+                    println!("number={number}");
                     sum += number;
                 }
             }
@@ -105,14 +112,12 @@ impl Matrix {
     }
 
     pub fn get(&mut self, row: usize, col: usize) -> Option<Cell> {
-        println!("Matrix.get - row={row}, col={col}");
-        let mut cell: Cell = *self.val.get(row)?.get(col)?;
-        println!("found cell = {:?}", cell);
+        let cell: &mut Cell = self.val.get_mut(row)?.get_mut(col)?;
         cell.visited = true;
         if cell.c == EMPTY_SYMBOL {
             return None;
         }
-        Some(cell)
+        Some(*cell)
     }
 
     pub fn val(&self) -> Vec<Vec<Cell>> {

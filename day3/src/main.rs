@@ -13,8 +13,7 @@ const INPUT: &str = "
 ..592.....
 ......755.
 ...$.*....
-.664.598..
-";
+.664.598..";
 
 const INPUT_SMOL: &str = "
 467.
@@ -30,7 +29,7 @@ fn main() {
     buf_reader.read_to_string(&mut input).unwrap();
 
     println!("First step");
-    let step_one: u32 = first_step(INPUT_SMOL.to_string());
+    let step_one: u32 = first_step(INPUT.to_string());
     println!("{}", step_one);
 
     println!("Second step");
@@ -39,22 +38,39 @@ fn main() {
 }
 
 fn first_step(input: String) -> u32 {
-    let mut matrix = Matrix::new(&input).unwrap();
+    let matrix = &mut Matrix::new(&input).unwrap();
+    let matrix_copy = matrix.clone(); // lmao rust get fukked ( T_T rip memory )
     let mut sum = 0;
-    for (i, line) in matrix.val().iter().enumerate() {
-        for (j, cell) in line.iter().enumerate() {
+
+    println!("matrix = {:?}", matrix);
+
+    for i in 0..matrix.val.len() {
+        let line = matrix.val.get_mut(i).unwrap();
+        for j in 0..line.len() {
+            println!(
+                "accessing ({i},{j}), size = ({},{})",
+                matrix_copy.val.len(),
+                line.len()
+            );
+            let cell = line.get_mut(j).unwrap();
             println!("cell = {:?}", cell);
-            let visited = cell.visited;
-            let char = cell.c;
-            if visited {
+            if cell.visited {
                 println!("visited");
                 continue;
             }
-            if char.is_digit(10) {
-                let mut num = vec![char];
+            cell.visited = true;
+            if cell.c.is_digit(10) {
+                println!("found digit {}", cell.c);
+                let mut num = vec![cell.c];
                 let mut k = j + 1;
-                while matrix.get(i, k).is_some_and(|c| c.c.is_digit(10)) {
-                    num.push(matrix.get(i, k).map(|c| c.c).unwrap());
+                loop {
+                    let mut cell = line.get_mut(k); // wtf is as_ref and as_mut
+                    if !cell.as_ref().is_some_and(|cl| cl.c.is_digit(10)) {
+                        break;
+                    }
+                    println!("in loop {:?}", cell);
+                    cell.as_mut().unwrap().visited = true;
+                    num.push(cell.unwrap().c);
                     k += 1;
                 }
                 let own_rows = i..i + 1;
@@ -71,10 +87,10 @@ fn first_step(input: String) -> u32 {
                     .map(|x| std::iter::repeat(x).zip(cols.clone()))
                     .flatten()
                     .filter(|cell| own_cells.all(|own_cell| *cell != own_cell))
-                    .map(|(row, col)| matrix.get(row, col))
+                    .map(|(row, col)| matrix_copy.get(row, col))
                     .any(|cell| cell.is_some());
                 if relevant {
-                    let number_str: String = num.iter().map(|c| *c).collect();
+                    let number_str: String = num.iter().collect();
                     let number: u32 = number_str.parse().unwrap();
                     println!("number={number}");
                     sum += number;
@@ -95,7 +111,7 @@ struct Cell {
     visited: bool,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct Matrix {
     val: Vec<Vec<Cell>>,
 }
@@ -111,16 +127,19 @@ impl Matrix {
         Some(Self { val: vec })
     }
 
-    pub fn get(&mut self, row: usize, col: usize) -> Option<Cell> {
-        let cell: &mut Cell = self.val.get_mut(row)?.get_mut(col)?;
-        cell.visited = true;
+    pub fn get(&self, row: usize, col: usize) -> Option<Cell> {
+        let cell = self.val.get(row)?.get(col)?;
         if cell.c == EMPTY_SYMBOL {
             return None;
         }
         Some(*cell)
     }
 
-    pub fn val(&self) -> Vec<Vec<Cell>> {
-        self.val.clone()
+    pub fn get_mut(&mut self, row: usize, col: usize) -> Option<&mut Cell> {
+        let cell: &mut Cell = self.val.get_mut(row)?.get_mut(col)?;
+        if cell.c == EMPTY_SYMBOL {
+            return None;
+        }
+        Some(cell)
     }
 }
